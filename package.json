@@ -24,13 +24,13 @@
   "homepage": "https://github.com/micaww/rage-rpc#readme",
   "dependencies": {},
   "devDependencies": {
-    "@babel/core": "^7.7.7",
-    "@babel/preset-env": "^7.7.7",
-    "@babel/preset-typescript": "^7.7.7",
-    "babel-loader": "^8.0.6",
+    "@babel/core": "^7.12.9",
+    "@babel/preset-env": "^7.12.7",
+    "@babel/preset-typescript": "^7.12.7",
+    "babel-loader": "^8.2.2",
     "replace-in-file-webpack-plugin": "^1.0.6",
-    "typescript": "^3.7.4",
-    "webpack": "^4.41.4",
-    "webpack-cli": "^3.3.10"
+    "typescript": "^3.9.7",
+    "webpack": "^4.44.2",
+    "webpack-cli": "^3.3.12"
   }
 }
