@@ -9,7 +9,7 @@ const DEBUG = false;
 
 const IDENTIFIER = '__rpc:id';
 const PROCESS_EVENT = '__rpc:process';
-const PROCESS_EVENT_PARTIAL = '__rpc:processPartial';      // new
+// const PROCESS_EVENT_PARTIAL = '__rpc:processPartial';      // new and disabled
 const BROWSER_REGISTER = '__rpc:browserRegister';
 const BROWSER_UNREGISTER = '__rpc:browserUnregister';
 const TRIGGER_EVENT = '__rpc:triggerEvent';
@@ -17,36 +17,39 @@ const TRIGGER_EVENT_BROWSERS = '__rpc:triggerEventBrowsers';
 
 const glob = environment === 'cef' ? window : global;
 
-if (!glob[PROCESS_EVENT_PARTIAL]) {    // new
-    try {
-        glob.__rpcPartialData = {};
+// if (!glob[PROCESS_EVENT_PARTIAL]) {    // new
+//     try {
+//         glob.__rpcPartialData = {};
+//         // PROCESS_EVENT_PARTIAL, event.id, index, parts.length, partString);
+//         glob[PROCESS_EVENT_PARTIAL] = (player: Player | string | number, id: number, index: number, size: number | string, rawData?: string) => {
 
-        glob[PROCESS_EVENT_PARTIAL] = (player: Player | string | number, id: number, index: number, size: number | string, rawData?: string) => {
-            if (environment !== "server") {
-                rawData = size as string;
-                size = index as number;
-                index = id as number;
-                id = player as number;
-            }
-            if (!glob.__rpcPartialData[id]) {
-                glob.__rpcPartialData[id] = new Array(size);
-            }
-            glob.__rpcPartialData[id][index] = rawData;
+//             if (environment !== "server") {
+//                 rawData = size as string;
+//                 size = index as number;
+//                 index = id as number;
+//                 id = player as number;
+//             }
+//             if (!glob.__rpcPartialData[id]) {
+//                 glob.__rpcPartialData[id] = new Array(size);
+//             }
+//             glob.__rpcPartialData[id][index] = rawData;
 
-            if (!glob.__rpcPartialData[id].includes(undefined)) {
-                if (environment !== "server") {
-                    glob[PROCESS_EVENT](glob.__rpcPartialData[id].join(''));
-                } else {
-                    glob[PROCESS_EVENT](player, glob.__rpcPartialData[id].join(''));
-                }
-                delete glob.__rpcPartialData[id];
-            }
-        };
-    } catch (err) {
-        // handle error
-        if (DEBUG) mp.console.logError(`catch !glob[PROCESS_EVENT_PARTIAL]: ${err}`);
-    }
-}
+//             if (!glob.__rpcPartialData[id].includes(undefined)) {
+//                 if (environment !== "server") {
+//                     glob[PROCESS_EVENT](glob.__rpcPartialData[id].join(''));
+//                 } else {
+//                     glob[PROCESS_EVENT](player, glob.__rpcPartialData[id].join(''));
+//                 }
+//                 delete glob.__rpcPartialData[id];
+//             }
+//             if (DEBUG) mp.console.logError(`glob[PROCESS_EVENT_PARTIAL]:id ${id}`);
+
+//         };
+//     } catch (err) {
+//         // handle error
+//         if (DEBUG) mp.console.logError(`catch !glob[PROCESS_EVENT_PARTIAL]: ${err}`);
+//     }
+// }
 
 if (!glob[PROCESS_EVENT]) {
     try {
@@ -104,7 +107,7 @@ if (!glob[PROCESS_EVENT]) {
 
         if (environment !== "cef") {
             mp.events.add(PROCESS_EVENT, glob[PROCESS_EVENT]);
-            mp.events.add(PROCESS_EVENT_PARTIAL, glob[PROCESS_EVENT_PARTIAL]);   // new
+            // mp.events.add(PROCESS_EVENT_PARTIAL, glob[PROCESS_EVENT_PARTIAL]);   // new but disabled again
 
             if (environment === "client") {
                 // set up internal pass-through events
@@ -118,12 +121,12 @@ if (!glob[PROCESS_EVENT]) {
                     Object.keys(glob.__rpcBrowsers).forEach(key => {
                         const b = glob.__rpcBrowsers[key];
                         if (!b || !util.isBrowserValid(b) || b === browser) {
-                            if (DEBUG) mp.console.logInfo(`initBrowser: delete OK: ${key}`);
+                            if (DEBUG) mp.console.logError(`initBrowser: delete OK: ${key}`);
                             delete glob.__rpcBrowsers[key];
                         }
                     });
                     glob.__rpcBrowsers[id] = browser;
-                    if (DEBUG) mp.console.logInfo(`initBrowser: new Browser found: ${id}`);
+                    if (DEBUG) mp.console.logError(`initBrowser: new Browser found: ${id}`);
                     browser.execute(`
                     window.name = '${id}';
                     if(typeof window['${IDENTIFIER}'] === 'undefined'){
@@ -150,9 +153,9 @@ if (!glob[PROCESS_EVENT]) {
                 register(TRIGGER_EVENT_BROWSERS, ([name, args], info) => {
                     Object.keys(glob.__rpcBrowsers).forEach(keys => {
                         const browser = glob.__rpcBrowsers[keys];
-                        if (DEBUG) mp.console.logInfo(`register name: ${name}`);
+                        if (DEBUG) mp.console.logError(`register name: ${name}`);
                         if (!browser || !util.isBrowserValid(browser)) {
-                            if (DEBUG) mp.console.logInfo(`key NOT deleted: ${keys}`);
+                            if (DEBUG) mp.console.logError(`key NOT deleted: ${keys}`);
                             delete glob.__rpcBrowsers[keys];
                         } else {
                             _callBrowser(browser, TRIGGER_EVENT, [name, args], { fenv: info.environment, noRet: 1 });
@@ -205,30 +208,38 @@ function callProcedure(name: string, args: any, info: ProcedureListenerInfo): Pr
         if (DEBUG) mp.console.logError(`catch callProcedure: ${err}`);
     }
 }
-// new
-function sendEventData(event: Event, player?: Player) {
-    try {
-        const callEnvFunc = {
-            client: (event: string, ...args: any[]) => mp.events.callRemote(event, ...args),
-            server: (event: string, ...args: any[]) => player.call(event, [...args]),
-        };
+// new but disabled again
+// function sendEventData(event: Event, player?: Player) {
+//     try {
+//         const callEnvFunc = {
+//             client: (event: string, ...args: any[]) => mp.events.callRemote(event, ...args),
+//             server: (event: string, ...args: any[]) => player.call(event, [...args]),
+//         };
 
-        const env = event.env as keyof typeof callEnvFunc;
+//         const env = event.env as keyof typeof callEnvFunc;
 
-        const sendString = util.stringifyData(event);
-        if (sendString.length > MAX_DATA_SIZE) {
-            const parts = util.chunkSubstr(sendString, MAX_DATA_SIZE);
-            parts.forEach((partString, index) => {
-                callEnvFunc[env](PROCESS_EVENT_PARTIAL, event.id, index, parts.length, partString);
-            });
-        } else {
-            callEnvFunc[env](PROCESS_EVENT, sendString);
-        }
-    } catch (err) {
-        // handle error
-        if (DEBUG) mp.console.logError(`catch sendEventData: ${err}`);
-    }
-}
+//         const sendString = util.stringifyData(event);
+//         if (sendString.length > MAX_DATA_SIZE) {
+//             if (DEBUG) mp.console.logError(`sendString.length GRÖSSER: ${sendString} MAX: ${MAX_DATA_SIZE}`);
+
+//             const parts = util.chunkSubstr(sendString, MAX_DATA_SIZE);
+//             if (DEBUG) mp.console.logError(`parts.length GRÖSSER: ${parts.length} MAX: ${MAX_DATA_SIZE}`);
+
+//             parts.forEach((partString, index) => {
+//                 if (DEBUG) mp.console.logError(`event.id GRÖSSER: ${event.id} partString: ${partString} index: ${index}`);
+
+//                 callEnvFunc[env](PROCESS_EVENT_PARTIAL, event.id, index, parts.length, partString);
+//             });
+//         } else {
+//             if (DEBUG) mp.console.logError(`sendString.length KLEINER: ${sendString.length} MAX: ${MAX_DATA_SIZE}`);
+
+//             callEnvFunc[env](PROCESS_EVENT, sendString);
+//         }
+//     } catch (err) {
+//         // handle error
+//         if (DEBUG) mp.console.logError(`catch sendEventData: ${err}`);
+//     }
+// }
 
 /**
  * Register a procedure.
@@ -258,7 +269,7 @@ export function unregister(name: string): void {
         if (arguments.length !== 1) throw 'unregister expects 1 argument: "name"';
         if (environment === "cef") glob[IDENTIFIER].then((id: string) => mp.trigger(BROWSER_UNREGISTER, JSON.stringify([id, name])));
         glob.__rpcListeners[name] = undefined;
-        if (DEBUG) mp.console.logInfo(`OK: unregister: ${name}`);
+        if (DEBUG) mp.console.logError(`OK: unregister: ${name}`);
     } catch (err) {
         // handle error
         if (DEBUG) mp.console.logError(`catch unregister: ${err}`);
@@ -307,8 +318,8 @@ function _callServer(name: string, args?: any, extraData: any = {}): Promise<any
                         args,
                         ...extraData
                     };
-                    // mp.events.callRemote(PROCESS_EVENT, util.stringifyData(event));
-                    sendEventData(event);   // new
+                    mp.events.callRemote(PROCESS_EVENT, util.stringifyData(event));
+                    // sendEventData(event);   // new
                 });
             }
             case "cef": {
@@ -368,8 +379,8 @@ function _callClient(player: Player, name: string, args?: any, extraData: any = 
                         args,
                         ...extraData
                     };
-                    // player.call(PROCESS_EVENT, [util.stringifyData(event)]);
-                    sendEventData(event, player);   // new
+                    player.call(PROCESS_EVENT, [util.stringifyData(event)]);
+                    // sendEventData(event, player);   // new
                 });
             }
             case 'cef': {

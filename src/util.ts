@@ -159,7 +159,7 @@ export function isBrowserValid(browser: Browser): boolean {
     try {
         browser.url;
     } catch (e) {
-        if (DEBUG) mp.console.logInfo(`catch OK: isBrowserValid: ${e}`);
+        if (DEBUG) mp.console.logError(`catch OK: isBrowserValid: ${e}`);
         return false;
     }
     return true;
@@ -168,7 +168,7 @@ export function isBrowserValid(browser: Browser): boolean {
 export function chunkSubstr(str: string, size: number): Array<String> {
     try {
     const numChunks = Math.ceil(str.length / size);
-    const chunks = new Array(numChunks);
+    var chunks = new Array(numChunks);
 
     let index = 0;
     for (let i = 0; i < numChunks; i += 1) {
