@@ -121,23 +121,23 @@ export function parseData(data: string): any {
     }
 }
 
-export function promiseResolve(result: any): Promise<any> {
-    try {
-        return new Promise(resolve => setTimeout(() => resolve(result), 0));
-    } catch (err) {
-        // handle error
-        if (DEBUG) mp.console.logError(`catch promiseResolve: ${err}`);
-    }
-}
+// export function promiseResolve(result: any): Promise<any> {
+//     try {
+//         return new Promise(resolve => setTimeout(() => resolve(result), 0));
+//     } catch (err) {
+//         // handle error
+//         if (DEBUG) mp.console.logError(`catch promiseResolve: ${err}`);
+//     }
+// }
 
-export function promiseReject(error: any): Promise<any> {
-    try {
-        return new Promise((_, reject) => setTimeout(() => reject(error), 0));
-    } catch (err) {
-        // handle error
-        if (DEBUG) mp.console.logError(`catch promiseReject: ${err}`);
-    }
-}
+// export function promiseReject(error: any): Promise<any> {
+//     try {
+//         return new Promise((_, reject) => setTimeout(() => reject(error), 0));
+//     } catch (err) {
+//         // handle error
+//         if (DEBUG) mp.console.logError(`catch promiseReject: ${err}`);
+//     }
+// }
 
 export function promiseTimeout(promise: Promise<any>, timeout?: number) {
     try {

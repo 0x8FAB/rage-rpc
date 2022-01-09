@@ -99,7 +99,8 @@ if (!glob[PROCESS_EVENT]) {
                 const info = glob.__rpcPending[data.id];
                 if (environment === "server" && info.player !== player) return;
                 if (info) {
-                    info.resolve(data.hasOwnProperty('err') ? util.promiseReject(data.err) : util.promiseResolve(data.res));
+                    // info.resolve(data.hasOwnProperty('err') ? util.promiseReject(data.err) : util.promiseResolve(data.res));
+                    info.resolve(data.hasOwnProperty('err') ? Promise.reject(data.err) : Promise.resolve(data.res));
                     delete glob.__rpcPending[data.id];
                 }
             }
@@ -201,8 +202,10 @@ function passEventToBrowser(browser: Browser, data: Event, ignoreNotFound: boole
 function callProcedure(name: string, args: any, info: ProcedureListenerInfo): Promise<any> {
     try {
         const listener = glob.__rpcListeners[name];
-        if (!listener) return util.promiseReject(`${ERR_NOT_FOUND} (${name})`);
-        return util.promiseResolve(listener(args, info));
+        // if (!listener) return util.promiseReject(`${ERR_NOT_FOUND} (${name})`);
+        // return util.promiseResolve(listener(args, info));
+        if (!listener) return Promise.reject(ERR_NOT_FOUND);
+        return Promise.resolve(listener(args, info));
     } catch (err) {
         // handle error
         if (DEBUG) mp.console.logError(`catch callProcedure: ${err}`);
@@ -288,7 +291,8 @@ export function unregister(name: string): void {
  */
 export function call(name: string, args?: any, options: CallOptions = {}): Promise<any> {
     try {
-        if (arguments.length < 1 || arguments.length > 3) return util.promiseReject('call expects 1 to 3 arguments: "name", optional "args", and optional "options"');
+        // if (arguments.length < 1 || arguments.length > 3) return util.promiseReject('call expects 1 to 3 arguments: "name", optional "args", and optional "options"');
+        if (arguments.length < 1 || arguments.length > 3) return Promise.reject('call expects 1 to 3 arguments: "name", optional "args", and optional "options"');
         return util.promiseTimeout(callProcedure(name, args, { environment }), options.timeout);
     } catch (err) {
         // handle error
@@ -344,7 +348,8 @@ function _callServer(name: string, args?: any, extraData: any = {}): Promise<any
  */
 export function callServer(name: string, args?: any, options: CallOptions = {}): Promise<any> {
     try {
-        if (arguments.length < 1 || arguments.length > 3) return util.promiseReject('callServer expects 1 to 3 arguments: "name", optional "args", and optional "options"');
+        // if (arguments.length < 1 || arguments.length > 3) return util.promiseReject('callServer expects 1 to 3 arguments: "name", optional "args", and optional "options"');
+        if (arguments.length < 1 || arguments.length > 3) return Promise.reject('callServer expects 1 to 3 arguments: "name", optional "args", and optional "options"');
 
         let extraData: any = {};
         if (options.noRet) extraData.noRet = 1;
@@ -431,11 +436,13 @@ export function callClient(player: Player | string, name?: string | any, args?: 
                 args = name;
                 name = player;
                 player = null;
-                if ((arguments.length < 1 || arguments.length > 3) || typeof name !== 'string') return util.promiseReject('callClient from the client expects 1 to 3 arguments: "name", optional "args", and optional "options"');
+                // if ((arguments.length < 1 || arguments.length > 3) || typeof name !== 'string') return util.promiseReject('callClient from the client expects 1 to 3 arguments: "name", optional "args", and optional "options"');
+                if ((arguments.length < 1 || arguments.length > 3) || typeof name !== 'string') return Promise.reject('callClient from the client expects 1 to 3 arguments: "name", optional "args", and optional "options"');
                 break;
             }
             case 'server': {
-                if ((arguments.length < 2 || arguments.length > 4) || typeof player !== 'object') return util.promiseReject('callClient from the server expects 2 to 4 arguments: "player", "name", optional "args", and optional "options"');
+                // if ((arguments.length < 2 || arguments.length > 4) || typeof player !== 'object') return util.promiseReject('callClient from the server expects 2 to 4 arguments: "player", "name", optional "args", and optional "options"');
+                if ((arguments.length < 2 || arguments.length > 4) || typeof player !== 'object') return Promise.reject('callClient from the server expects 2 to 4 arguments: "player", "name", optional "args", and optional "options"');
                 break;
             }
             case 'cef': {
@@ -443,7 +450,8 @@ export function callClient(player: Player | string, name?: string | any, args?: 
                 args = name;
                 name = player;
                 player = null;
-                if ((arguments.length < 1 || arguments.length > 3) || typeof name !== 'string') return util.promiseReject('callClient from the browser expects 1 to 3 arguments: "name", optional "args", and optional "options"');
+                // if ((arguments.length < 1 || arguments.length > 3) || typeof name !== 'string') return util.promiseReject('callClient from the browser expects 1 to 3 arguments: "name", optional "args", and optional "options"');
+                if ((arguments.length < 1 || arguments.length > 3) || typeof name !== 'string') return Promise.reject('callClient from the browser expects 1 to 3 arguments: "name", optional "args", and optional "options"');
                 break;
             }
         }
@@ -487,9 +495,11 @@ function _callBrowsers(player: Player, name: string, args?: any, extraData: any 
         switch (environment) {
             case 'client':
                 const browserId = glob.__rpcBrowserProcedures[name];
-                if (!browserId) return util.promiseReject(`${ERR_NOT_FOUND} (${name})`);
+                // if (!browserId) return util.promiseReject(`${ERR_NOT_FOUND} (${name})`);
+                if (!browserId) return Promise.reject(ERR_NOT_FOUND);
                 const browser = glob.__rpcBrowsers[browserId];
-                if (!browser || !util.isBrowserValid(browser)) return util.promiseReject(ERR_NOT_FOUND);
+                // if (!browser || !util.isBrowserValid(browser)) return util.promiseReject(ERR_NOT_FOUND);
+                if (!browser || !util.isBrowserValid(browser)) return Promise.reject(ERR_NOT_FOUND);
                 return _callBrowser(browser, name, args, extraData);
             case 'server':
                 return _callClient(player, '__rpc:callBrowsers', [name, args, +extraData.noRet], extraData);
@@ -524,12 +534,14 @@ export function callBrowsers(player: Player | string, name?: string | any, args?
                 options = args || {};
                 args = name;
                 name = player;
-                if (arguments.length < 1 || arguments.length > 3) return util.promiseReject('callBrowsers from the client or browser expects 1 to 3 arguments: "name", optional "args", and optional "options"');
+                // if (arguments.length < 1 || arguments.length > 3) return util.promiseReject('callBrowsers from the client or browser expects 1 to 3 arguments: "name", optional "args", and optional "options"');
+                if (arguments.length < 1 || arguments.length > 3) return Promise.reject('callBrowsers from the client or browser expects 1 to 3 arguments: "name", optional "args", and optional "options"');
                 if (options.noRet) extraData.noRet = 1;
                 promise = _callBrowsers(null, name, args, extraData);
                 break;
             case 'server':
-                if (arguments.length < 2 || arguments.length > 4) return util.promiseReject('callBrowsers from the server expects 2 to 4 arguments: "player", "name", optional "args", and optional "options"');
+                // if (arguments.length < 2 || arguments.length > 4) return util.promiseReject('callBrowsers from the server expects 2 to 4 arguments: "player", "name", optional "args", and optional "options"');
+                if (arguments.length < 2 || arguments.length > 4) return Promise.reject('callBrowsers from the server expects 2 to 4 arguments: "player", "name", optional "args", and optional "options"');
                 if (options.noRet) extraData.noRet = 1;
                 promise = _callBrowsers(player as Player, name, args, extraData);
                 break;
@@ -557,8 +569,10 @@ export function callBrowsers(player: Player | string, name?: string | any, args?
  */
 export function callBrowser(browser: Browser, name: string, args?: any, options: CallOptions = {}): Promise<any> {
     try {
-        if (environment !== 'client') return util.promiseReject('callBrowser can only be used in the client environment');
-        if (arguments.length < 2 || arguments.length > 4) return util.promiseReject('callBrowser expects 2 to 4 arguments: "browser", "name", optional "args", and optional "options"');
+        // if (environment !== 'client') return util.promiseReject('callBrowser can only be used in the client environment');
+        // if (arguments.length < 2 || arguments.length > 4) return util.promiseReject('callBrowser expects 2 to 4 arguments: "browser", "name", optional "args", and optional "options"');
+        if (environment !== 'client') return Promise.reject('callBrowser can only be used in the client environment');
+        if (arguments.length < 2 || arguments.length > 4) return Promise.reject('callBrowser expects 2 to 4 arguments: "browser", "name", optional "args", and optional "options"');
 
         let extraData: any = {};
         if (options.noRet) extraData.noRet = 1;
