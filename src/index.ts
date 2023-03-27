@@ -15,7 +15,7 @@ const BROWSER_UNREGISTER = '__rpc:browserUnregister';
 const TRIGGER_EVENT = '__rpc:triggerEvent';
 const TRIGGER_EVENT_BROWSERS = '__rpc:triggerEventBrowsers';
 
-const glob = environment === 'cef' ? window : global;
+const glob = (environment === 'cef' || environment === 'react') ? window : global;
 
 // if (!glob[PROCESS_EVENT_PARTIAL]) {    // new
 //     try {
@@ -42,12 +42,12 @@ const glob = environment === 'cef' ? window : global;
 //                 }
 //                 delete glob.__rpcPartialData[id];
 //             }
-//             if (DEBUG) mp.console.logError(`glob[PROCESS_EVENT_PARTIAL]:id ${id}`);
+//             if (DEBUG) mp && mp.console.logError(`glob[PROCESS_EVENT_PARTIAL]:id ${id}`);
 
 //         };
 //     } catch (err) {
 //         // handle error
-//         if (DEBUG) mp.console.logError(`catch !glob[PROCESS_EVENT_PARTIAL]: ${err}`);
+//         if (DEBUG) mp && mp.console.logError(`catch !glob[PROCESS_EVENT_PARTIAL]: ${err}`);
 //     }
 // }
 
@@ -79,7 +79,7 @@ if (!glob[PROCESS_EVENT]) {
                         break;
                     case "client": {
                         if (data.env === "server") {
-                            ret = ev => mp.events.callRemote(PROCESS_EVENT, util.stringifyData(ev));
+                            ret = ev => mp && mp.events.callRemote(PROCESS_EVENT, util.stringifyData(ev));
                         } else if (data.env === "cef") {
                             const browser = data.b && glob.__rpcBrowsers[data.b];
                             info.browser = browser;
@@ -88,7 +88,7 @@ if (!glob[PROCESS_EVENT]) {
                         break;
                     }
                     case "cef": {
-                        ret = ev => mp.trigger(PROCESS_EVENT, util.stringifyData(ev));
+                        ret = ev => mp && mp.trigger(PROCESS_EVENT, util.stringifyData(ev));
                     }
                 }
                 if (ret) {
@@ -106,9 +106,9 @@ if (!glob[PROCESS_EVENT]) {
             }
         };
 
-        if (environment !== "cef") {
-            mp.events.add(PROCESS_EVENT, glob[PROCESS_EVENT]);
-            // mp.events.add(PROCESS_EVENT_PARTIAL, glob[PROCESS_EVENT_PARTIAL]);   // new but disabled again
+        if (environment !== "cef" && environment !== "react") {
+            mp && mp.events.add(PROCESS_EVENT, glob[PROCESS_EVENT]);
+            // mp && mp.events.add(PROCESS_EVENT_PARTIAL, glob[PROCESS_EVENT_PARTIAL]);   // new but disabled again
 
             if (environment === "client") {
                 // set up internal pass-through events
@@ -122,12 +122,12 @@ if (!glob[PROCESS_EVENT]) {
                     Object.keys(glob.__rpcBrowsers).forEach(key => {
                         const b = glob.__rpcBrowsers[key];
                         if (!b || !util.isBrowserValid(b) || b === browser) {
-                            if (DEBUG) mp.console.logError(`initBrowser: delete OK: ${key}`);
+                            if (DEBUG) mp && mp.console.logError(`initBrowser: delete OK: ${key}`);
                             delete glob.__rpcBrowsers[key];
                         }
                     });
                     glob.__rpcBrowsers[id] = browser;
-                    if (DEBUG) mp.console.logError(`initBrowser: new Browser found: ${id}`);
+                    if (DEBUG) mp && mp.console.logError(`initBrowser: new Browser found: ${id}`);
                     browser.execute(`
                     window.name = '${id}';
                     if(typeof window['${IDENTIFIER}'] === 'undefined'){
@@ -137,16 +137,16 @@ if (!glob[PROCESS_EVENT]) {
                     }
                 `);
                 };
-                mp.browsers.forEach(initBrowser);
-                mp.events.add('browserCreated', initBrowser);
+                mp && mp.browsers.forEach(initBrowser);
+                mp && mp.events.add('browserCreated', initBrowser);
 
                 // set up browser registration map
                 glob.__rpcBrowserProcedures = {};
-                mp.events.add(BROWSER_REGISTER, (data: string) => {
+                mp && mp.events.add(BROWSER_REGISTER, (data: string) => {
                     const [browserId, name] = JSON.parse(data);
                     glob.__rpcBrowserProcedures[name] = browserId;
                 });
-                mp.events.add(BROWSER_UNREGISTER, (data: string) => {
+                mp && mp.events.add(BROWSER_UNREGISTER, (data: string) => {
                     const [browserId, name] = JSON.parse(data);
                     if (glob.__rpcBrowserProcedures[name] === browserId) delete glob.__rpcBrowserProcedures[name];
                 });
@@ -154,9 +154,9 @@ if (!glob[PROCESS_EVENT]) {
                 register(TRIGGER_EVENT_BROWSERS, ([name, args], info) => {
                     Object.keys(glob.__rpcBrowsers).forEach(keys => {
                         const browser = glob.__rpcBrowsers[keys];
-                        if (DEBUG) mp.console.logError(`register name: ${name}`);
+                        if (DEBUG) mp && mp.console.logError(`register name: ${name}`);
                         if (!browser || !util.isBrowserValid(browser)) {
-                            if (DEBUG) mp.console.logError(`key NOT deleted: ${keys}`);
+                            if (DEBUG) mp && mp.console.logError(`key NOT deleted: ${keys}`);
                             delete glob.__rpcBrowsers[keys];
                         } else {
                             _callBrowser(browser, TRIGGER_EVENT, [name, args], { fenv: info.environment, noRet: 1 });
@@ -185,17 +185,17 @@ if (!glob[PROCESS_EVENT]) {
 
     } catch (err) {
         // handle error
-        if (DEBUG) mp.console.logError(`catch !glob[PROCESS_EVENT]: ${err}`);
+        if (DEBUG) mp && mp.console.logError(`catch !glob[PROCESS_EVENT]: ${err}`);
     }
 }
 
 function passEventToBrowser(browser: Browser, data: Event, ignoreNotFound: boolean): void {
     try {
         const raw = util.stringifyData(data);
-        browser.execute(`var process = window["${PROCESS_EVENT}"]; if(process){ process(${JSON.stringify(raw)}); }else{ ${ignoreNotFound ? '' : `mp.trigger("${PROCESS_EVENT}", '{"ret":1,"id":"${data.id}","err":"${ERR_NOT_FOUND}","env":"cef"}');`} }`);
+        browser.execute(`var process = window["${PROCESS_EVENT}"]; if(process){ process(${JSON.stringify(raw)}); }else{ ${ignoreNotFound ? '' : `mp && mp.trigger("${PROCESS_EVENT}", '{"ret":1,"id":"${data.id}","err":"${ERR_NOT_FOUND}","env":"cef"}');`} }`);
     } catch (err) {
         // handle error
-        if (DEBUG) mp.console.logError(`catch passEventToBrowser: ${err}: ${data.id}`);
+        if (DEBUG) mp && mp.console.logError(`catch passEventToBrowser: ${err}: ${data.id}`);
     }
 }
 
@@ -208,14 +208,14 @@ function callProcedure(name: string, args: any, info: ProcedureListenerInfo): Pr
         return Promise.resolve(listener(args, info));
     } catch (err) {
         // handle error
-        if (DEBUG) mp.console.logError(`catch callProcedure: ${err}`);
+        if (DEBUG) mp && mp.console.logError(`catch callProcedure: ${err}`);
     }
 }
 // new but disabled again
 // function sendEventData(event: Event, player?: Player) {
 //     try {
 //         const callEnvFunc = {
-//             client: (event: string, ...args: any[]) => mp.events.callRemote(event, ...args),
+//             client: (event: string, ...args: any[]) => mp && mp.events.callRemote(event, ...args),
 //             server: (event: string, ...args: any[]) => player.call(event, [...args]),
 //         };
 
@@ -223,24 +223,24 @@ function callProcedure(name: string, args: any, info: ProcedureListenerInfo): Pr
 
 //         const sendString = util.stringifyData(event);
 //         if (sendString.length > MAX_DATA_SIZE) {
-//             if (DEBUG) mp.console.logError(`sendString.length GRÖSSER: ${sendString} MAX: ${MAX_DATA_SIZE}`);
+//             if (DEBUG) mp && mp.console.logError(`sendString.length GRÖSSER: ${sendString} MAX: ${MAX_DATA_SIZE}`);
 
 //             const parts = util.chunkSubstr(sendString, MAX_DATA_SIZE);
-//             if (DEBUG) mp.console.logError(`parts.length GRÖSSER: ${parts.length} MAX: ${MAX_DATA_SIZE}`);
+//             if (DEBUG) mp && mp.console.logError(`parts.length GRÖSSER: ${parts.length} MAX: ${MAX_DATA_SIZE}`);
 
 //             parts.forEach((partString, index) => {
-//                 if (DEBUG) mp.console.logError(`event.id GRÖSSER: ${event.id} partString: ${partString} index: ${index}`);
+//                 if (DEBUG) mp && mp.console.logError(`event.id GRÖSSER: ${event.id} partString: ${partString} index: ${index}`);
 
 //                 callEnvFunc[env](PROCESS_EVENT_PARTIAL, event.id, index, parts.length, partString);
 //             });
 //         } else {
-//             if (DEBUG) mp.console.logError(`sendString.length KLEINER: ${sendString.length} MAX: ${MAX_DATA_SIZE}`);
+//             if (DEBUG) mp && mp.console.logError(`sendString.length KLEINER: ${sendString.length} MAX: ${MAX_DATA_SIZE}`);
 
 //             callEnvFunc[env](PROCESS_EVENT, sendString);
 //         }
 //     } catch (err) {
 //         // handle error
-//         if (DEBUG) mp.console.logError(`catch sendEventData: ${err}`);
+//         if (DEBUG) mp && mp.console.logError(`catch sendEventData: ${err}`);
 //     }
 // }
 
@@ -253,13 +253,13 @@ function callProcedure(name: string, args: any, info: ProcedureListenerInfo): Pr
 export function register(name: string, cb: ProcedureListener): Function {
     try {
         if (arguments.length !== 2) throw 'register expects 2 arguments: "name" and "cb"';
-        if (environment === "cef") glob[IDENTIFIER].then((id: string) => mp.trigger(BROWSER_REGISTER, JSON.stringify([id, name])));
+        if (environment === "cef") glob[IDENTIFIER].then((id: string) => mp && mp.trigger(BROWSER_REGISTER, JSON.stringify([id, name])));
         glob.__rpcListeners[name] = cb;
 
         return () => unregister(name);
     } catch (err) {
         // handle error
-        if (DEBUG) mp.console.logError(`catch register: ${err}`);
+        if (DEBUG) mp && mp.console.logError(`catch register: ${err}`);
     }
 }
 
@@ -270,12 +270,12 @@ export function register(name: string, cb: ProcedureListener): Function {
 export function unregister(name: string): void {
     try {
         if (arguments.length !== 1) throw 'unregister expects 1 argument: "name"';
-        if (environment === "cef") glob[IDENTIFIER].then((id: string) => mp.trigger(BROWSER_UNREGISTER, JSON.stringify([id, name])));
+        if (environment === "cef") glob[IDENTIFIER].then((id: string) => mp && mp.trigger(BROWSER_UNREGISTER, JSON.stringify([id, name])));
         glob.__rpcListeners[name] = undefined;
-        if (DEBUG) mp.console.logError(`OK: unregister: ${name}`);
+        if (DEBUG) mp && mp.console.logError(`OK: unregister: ${name}`);
     } catch (err) {
         // handle error
-        if (DEBUG) mp.console.logError(`catch unregister: ${err}`);
+        if (DEBUG) mp && mp.console.logError(`catch unregister: ${err}`);
     }
 }
 
@@ -296,7 +296,7 @@ export function call(name: string, args?: any, options: CallOptions = {}): Promi
         return util.promiseTimeout(callProcedure(name, args, { environment }), options.timeout);
     } catch (err) {
         // handle error
-        if (DEBUG) mp.console.logError(`catch call: ${err}`);
+        if (DEBUG) mp && mp.console.logError(`catch call: ${err}`);
     }
 }
 
@@ -322,7 +322,7 @@ function _callServer(name: string, args?: any, extraData: any = {}): Promise<any
                         args,
                         ...extraData
                     };
-                    mp.events.callRemote(PROCESS_EVENT, util.stringifyData(event));
+                    mp && mp.events.callRemote(PROCESS_EVENT, util.stringifyData(event));
                     // sendEventData(event);   // new
                 });
             }
@@ -332,7 +332,7 @@ function _callServer(name: string, args?: any, extraData: any = {}): Promise<any
         }
     } catch (err) {
         // handle error
-        if (DEBUG) mp.console.logError(`catch _callServer: ${err}`);
+        if (DEBUG) mp && mp.console.logError(`catch _callServer: ${err}`);
     }
 }
 
@@ -357,7 +357,7 @@ export function callServer(name: string, args?: any, options: CallOptions = {}):
         return util.promiseTimeout(_callServer(name, args, extraData), options.timeout);
     } catch (err) {
         // handle error
-        if (DEBUG) mp.console.logError(`catch callServer: ${err}`);
+        if (DEBUG) mp && mp.console.logError(`catch callServer: ${err}`);
     }
 }
 
@@ -406,14 +406,14 @@ function _callClient(player: Player, name: string, args?: any, extraData: any = 
                             args,
                             ...extraData
                         };
-                        mp.trigger(PROCESS_EVENT, util.stringifyData(event));
+                        mp && mp.trigger(PROCESS_EVENT, util.stringifyData(event));
                     });
                 });
             }
         }
     } catch (err) {
         // handle error
-        if (DEBUG) mp.console.logError(`catch _callClient: ${err}`);
+        if (DEBUG) mp && mp.console.logError(`catch _callClient: ${err}`);
     }
 }
 
@@ -462,7 +462,7 @@ export function callClient(player: Player | string, name?: string | any, args?: 
         return util.promiseTimeout(_callClient(player as Player, name, args, extraData), options.timeout);
     } catch (err) {
         // handle error
-        if (DEBUG) mp.console.logError(`catch callClient: ${err}`);
+        if (DEBUG) mp && mp.console.logError(`catch callClient: ${err}`);
     }
 }
 
@@ -486,7 +486,7 @@ function _callBrowser(browser: Browser, name: string, args?: any, extraData: any
         });
     } catch (err) {
         // handle error
-        if (DEBUG) mp.console.logError(`catch _callBrowser: ${err}`);
+        if (DEBUG) mp && mp.console.logError(`catch _callBrowser: ${err}`);
     }
 }
 
@@ -508,7 +508,7 @@ function _callBrowsers(player: Player, name: string, args?: any, extraData: any 
         }
     } catch (err) {
         // handle error
-        if (DEBUG) mp.console.logError(`catch _callBrowsers: ${err}`);
+        if (DEBUG) mp && mp.console.logError(`catch _callBrowsers: ${err}`);
     }
 }
 
@@ -552,7 +552,7 @@ export function callBrowsers(player: Player | string, name?: string | any, args?
         }
     } catch (err) {
         // handle error
-        if (DEBUG) mp.console.logError(`catch callBrowsers: ${err}`);
+        if (DEBUG) mp && mp.console.logError(`catch callBrowsers: ${err}`);
     }
 }
 
@@ -580,7 +580,7 @@ export function callBrowser(browser: Browser, name: string, args?: any, options:
         return util.promiseTimeout(_callBrowser(browser, name, args, extraData), options.timeout);
     } catch (err) {
         // handle error
-        if (DEBUG) mp.console.logError(`catch callBrowser: ${err}`);
+        if (DEBUG) mp && mp.console.logError(`catch callBrowser: ${err}`);
     }
 }
 
@@ -592,7 +592,7 @@ function callEvent(name: string, args: any, info: ProcedureListenerInfo) {
         }
     } catch (err) {
         // handle error
-        if (DEBUG) mp.console.logError(`catch callEvent: ${err}`);
+        if (DEBUG) mp && mp.console.logError(`catch callEvent: ${err}`);
     }
 }
 
@@ -613,7 +613,7 @@ export function on(name: string, cb: ProcedureListener): Function {
         return () => off(name, cb);
     } catch (err) {
         // handle error
-        if (DEBUG) mp.console.logError(`catch on: ${err}`);
+        if (DEBUG) mp && mp.console.logError(`catch on: ${err}`);
     }
 }
 
@@ -632,7 +632,7 @@ export function off(name: string, cb: ProcedureListener) {
         }
     } catch (err) {
         // handle error
-        if (DEBUG) mp.console.logError(`catch off: ${err}`);
+        if (DEBUG) mp && mp.console.logError(`catch off: ${err}`);
     }
 }
 
@@ -650,7 +650,7 @@ export function trigger(name: string, args?: any) {
         callEvent(name, args, { environment });
     } catch (err) {
         // handle error
-        if (DEBUG) mp.console.logError(`catch trigger: ${err}`);
+        if (DEBUG) mp && mp.console.logError(`catch trigger: ${err}`);
     }
 }
 
@@ -689,7 +689,7 @@ export function triggerClient(player: Player | string, name?: string | any, args
         _callClient(player as Player, TRIGGER_EVENT, [name, args], { noRet: 1 });
     } catch (err) {
         // handle error
-        if (DEBUG) mp.console.logError(`catch triggerClient: ${err}`);
+        if (DEBUG) mp && mp.console.logError(`catch triggerClient: ${err}`);
     }
 }
 
@@ -708,7 +708,7 @@ export function triggerServer(name: string, args?: any) {
         _callServer(TRIGGER_EVENT, [name, args], { noRet: 1 });
     } catch (err) {
         // handle error
-        if (DEBUG) mp.console.logError(`catch triggerServer: ${err}`);
+        if (DEBUG) mp && mp.console.logError(`catch triggerServer: ${err}`);
     }
 }
 
@@ -739,7 +739,7 @@ export function triggerBrowsers(player: Player | string, name?: string | any, ar
         _callClient(player as Player, TRIGGER_EVENT_BROWSERS, [name, args], { noRet: 1 });
     } catch (err) {
         // handle error
-        if (DEBUG) mp.console.logError(`catch triggerBrowsers: ${err}`);
+        if (DEBUG) mp && mp.console.logError(`catch triggerBrowsers: ${err}`);
     }
 }
 
@@ -760,7 +760,7 @@ export function triggerBrowser(browser: Browser, name: string, args?: any) {
         _callBrowser(browser, TRIGGER_EVENT, [name, args], { noRet: 1 });
     } catch (err) {
         // handle error
-        if (DEBUG) mp.console.logError(`catch triggerBrowser: ${err}`);
+        if (DEBUG) mp && mp.console.logError(`catch triggerBrowser: ${err}`);
     }
 }
 

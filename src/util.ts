@@ -50,7 +50,8 @@ export function uid(): string {
 
 export function getEnvironment(): string {
     try {
-        if (mp.joaat) return 'server';
+        if (typeof(mp) === 'undefined') return 'react';
+        else if (mp.joaat) return 'server';
         else if (mp.game && mp.game.joaat) return 'client';
         else if (mp.trigger) return 'cef';
     } catch (err) {
