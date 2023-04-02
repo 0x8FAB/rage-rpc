@@ -204,7 +204,7 @@ function callProcedure(name: string, args: any, info: ProcedureListenerInfo): Pr
         const listener = glob.__rpcListeners[name];
         // if (!listener) return util.promiseReject(`${ERR_NOT_FOUND} (${name})`);
         // return util.promiseResolve(listener(args, info));
-        if (!listener) return Promise.reject(ERR_NOT_FOUND);
+        if (!listener) return Promise.reject(`${ERR_NOT_FOUND} (${name})`);
         return Promise.resolve(listener(args, info));
     } catch (err) {
         // handle error
