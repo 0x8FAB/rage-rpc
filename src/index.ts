@@ -202,8 +202,6 @@ function passEventToBrowser(browser: Browser, data: Event, ignoreNotFound: boole
 function callProcedure(name: string, args: any, info: ProcedureListenerInfo): Promise<any> {
     try {
         const listener = glob.__rpcListeners[name];
-        // if (!listener) return util.promiseReject(`${ERR_NOT_FOUND} (${name})`);
-        // return util.promiseResolve(listener(args, info));
         if (!listener) return Promise.reject(`${ERR_NOT_FOUND} (${name})`);
         return Promise.resolve(listener(args, info));
     } catch (err) {
@@ -495,11 +493,9 @@ function _callBrowsers(player: Player, name: string, args?: any, extraData: any 
         switch (environment) {
             case 'client':
                 const browserId = glob.__rpcBrowserProcedures[name];
-                // if (!browserId) return util.promiseReject(`${ERR_NOT_FOUND} (${name})`);
-                if (!browserId) return Promise.reject(ERR_NOT_FOUND);
+                if (!browserId) return Promise.reject(`${ERR_NOT_FOUND} (${name})`);
                 const browser = glob.__rpcBrowsers[browserId];
-                // if (!browser || !util.isBrowserValid(browser)) return util.promiseReject(ERR_NOT_FOUND);
-                if (!browser || !util.isBrowserValid(browser)) return Promise.reject(ERR_NOT_FOUND);
+                if (!browser || !util.isBrowserValid(browser)) return Promise.reject(`${ERR_NOT_FOUND} (${name})`);
                 return _callBrowser(browser, name, args, extraData);
             case 'server':
                 return _callClient(player, '__rpc:callBrowsers', [name, args, +extraData.noRet], extraData);
